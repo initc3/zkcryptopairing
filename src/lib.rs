@@ -11,6 +11,13 @@
 // Force public structures to implement Debug
 #![deny(missing_debug_implementations)]
 
+#![feature(specialization)]
+#[macro_use]
+extern crate pyo3;
+
+use pyo3::prelude::*;
+
+
 extern crate byteorder;
 #[macro_use]
 extern crate ff;
@@ -20,13 +27,14 @@ extern crate rand;
 pub mod tests;
 
 pub mod bls12_381;
-
+use bls12_381::*;
 mod wnaf;
 pub use self::wnaf::Wnaf;
-
-use ff::{Field, PrimeField, PrimeFieldDecodingError, PrimeFieldRepr, ScalarEngine, SqrtField};
+use ff::{Field,  PrimeField, PrimeFieldDecodingError, PrimeFieldRepr, ScalarEngine, SqrtField};
 use std::error::Error;
 use std::fmt;
+use rand::{Rand, Rng, SeedableRng, XorShiftRng};
+
 
 /// An "engine" is a collection of types (fields, elliptic curve groups, etc.)
 /// with well-defined relationships. In particular, the G1/G2 curve groups are
@@ -104,7 +112,126 @@ pub trait Engine: ScalarEngine {
             [(&(p.into().prepare()), &(q.into().prepare()))].into_iter(),
         )).unwrap()
     }
+
+
+
 }
+
+#[pyclass]
+struct PyG1 {
+   g1 : G1
+}
+
+#[pyfunction]
+fn py_pairing(g1: &PyG1, g2: &PyG2) -> PyResult<()> {
+    let a = g1.g1.into_affine();
+    let b = g2.g2.into_affine();
+    
+    Ok(())
+}
+
+#[pymethods]
+impl PyG1 {
+    
+    #[new]
+    fn __new__(obj: &PyRawObject, s1: u32, s2: u32, s3: u32, s4: u32) -> PyResult<()>{
+        let mut rng = XorShiftRng::from_seed([s1,s2,s3,s4]);
+        let g =  G1::rand(&mut rng);
+        obj.init(|t| PyG1{
+            g1: g,
+        })
+    }
+    
+    fn py_pairing_with(&self, g2: &PyG2, r: &mut PyFq12) -> PyResult<()> {
+        let a = self.g1.into_affine();
+        let b = g2.g2.into_affine();
+        r.fq12 = a.pairing_with(&b);
+        Ok(())
+    }
+    
+    
+}
+
+#[pyclass]
+struct PyG2 {
+    g2 : G2
+}
+
+#[pymethods]
+impl PyG2 {
+    #[new]
+    fn __new__(obj: &PyRawObject, s1: u32, s2: u32, s3: u32, s4: u32) -> PyResult<()>{
+        let mut rng = XorShiftRng::from_seed([s1,s2,s3,s4]);
+        let g =  G2::rand(&mut rng);
+        obj.init(|t| PyG2{
+            g2: g,
+        })
+    }
+    
+    fn py_pairing_with(&self, g1: &PyG1, r: &mut PyFq12) -> PyResult<()> {
+        let a = self.g2.into_affine();
+        let b = g1.g1.into_affine();
+        r.fq12 = a.pairing_with(&b);
+        Ok(())
+    }
+
+}
+
+#[pyclass]
+struct PyFq12 {
+    fq12 : Fq12
+} 
+
+#[pymethods]
+impl PyFq12 {
+    #[new]
+    fn __new__(obj: &PyRawObject) -> PyResult<()>{
+        Ok(())
+    }
+
+    pub fn __str__(&self) -> PyResult<String> {
+        Ok(format!("Fq12({} + {} * w)",self.fq12.c0, self.fq12.c1 ))                
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!("Fq12({} + {} * w)",self.fq12.c0, self.fq12.c1 ))                
+    }
+
+    fn rand(&mut self, s1: u32, s2: u32, s3: u32, s4: u32) -> PyResult<()> {
+        let mut rng = XorShiftRng::from_seed([s1,s2,s3,s4]);
+        self.fq12.c0 = rng.gen();
+        self.fq12.c1 = rng.gen();
+        Ok(())
+    }
+
+    fn add_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.fq12.add_assign(&other.fq12);
+        Ok(())
+    }
+
+    fn sub_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.fq12.sub_assign(&other.fq12);
+        Ok(())
+    }
+    
+    fn mul_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.fq12.mul_assign(&other.fq12);
+        Ok(())
+    }
+
+    
+}
+
+
+#[pymodinit]
+fn pypairing(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyG1>()?;
+    m.add_class::<PyG2>()?;
+    m.add_class::<PyFq12>()?;
+    m.add_function(wrap_function!(py_pairing)).unwrap();
+    Ok(())
+}
+
 
 /// Projective representation of an elliptic curve point guaranteed to be
 /// in the correct prime order subgroup.
@@ -269,6 +396,8 @@ pub enum GroupDecodingError {
     NotInSubgroup,
     /// One of the coordinates could not be decoded
     CoordinateDecodingError(&'static str, PrimeFieldDecodingError),
+        //assert!(a.pairing_with(&b) == pairing(a, b));
+                                                
     /// The compression mode of the encoded element was not as expected
     UnexpectedCompressionMode,
     /// The encoding contained bits that should not have been set
