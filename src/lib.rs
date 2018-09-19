@@ -27,9 +27,10 @@ extern crate rand;
 pub mod tests;
 
 pub mod bls12_381;
-use bls12_381::*;
+use bls12_381::{G1, G2, Fq12};
 mod wnaf;
 pub use self::wnaf::Wnaf;
+
 use ff::{Field,  PrimeField, PrimeFieldDecodingError, PrimeFieldRepr, ScalarEngine, SqrtField};
 use std::error::Error;
 use std::fmt;
