@@ -11,3 +11,7 @@ services:
       - ./benches:/usr/src/pairing/benches
       - ./Cargo.toml:/usr/src/pairing/Cargo.toml
       - ./setup.py:/usr/src/pairing/setup.py
+  build_wheel:
+    build:
+      context: .
+      dockerfile: wheel.Dockerfile
