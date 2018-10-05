@@ -30,10 +30,10 @@ TODO:
 
 ```console
 $ docker-compose build build_wheel
-$ docker-compose run --rm build_wheel sh
+$ docker-compose run --rm build_wheel ipython
 ```
 
-Run `ipython` and try the above example:
+Try:
 
 ```python
 from pypairing import PyG1, PyG2, PyFq12
