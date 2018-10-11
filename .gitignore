@@ -1,3 +1,9 @@
 target/
 **/*.rs.bk
 Cargo.lock
+
+# build dirs from `python setup.py bdist_wheel`
+build/
+dist/
+pypairing.egg-info/
+wheelhouse/
