@@ -27,7 +27,7 @@ extern crate rand;
 pub mod tests;
 
 pub mod bls12_381;
-use bls12_381::{G1, G2, Fq12};
+use bls12_381::{G1, G2, Fr, Fq12};
 mod wnaf;
 pub use self::wnaf::Wnaf;
 
@@ -118,17 +118,17 @@ pub trait Engine: ScalarEngine {
 
 }
 
-#[pyclass]
-struct PyG1 {
-   g1 : G1
-}
-
 #[pyfunction]
 fn py_pairing(g1: &PyG1, g2: &PyG2) -> PyResult<()> {
     let a = g1.g1.into_affine();
     let b = g2.g2.into_affine();
     
     Ok(())
+}
+
+#[pyclass]
+struct PyG1 {
+   g1 : G1
 }
 
 #[pymethods]
@@ -174,7 +174,22 @@ impl PyG1 {
         self.g1.sub_assign(&other.g1);
         Ok(())
     }
+
+    /// a.equals(b)
+    fn equals(&self, other: &Self) -> bool {
+        self.g1 == other.g1
+    }
     
+    /// Copy other into self
+    fn copy(&mut self, other: &Self) -> PyResult<()> {
+        self.g1 = other.g1;
+        Ok(())
+    }
+   
+    pub fn __str__(&self) -> PyResult<String> {
+        Ok(format!("G1(x = {} , y = {} )",self.g1.into_affine().x, self.g1.into_affine().y))                
+    }
+
 }
 
 #[pyclass]
@@ -224,8 +239,94 @@ impl PyG2 {
         self.g2.sub_assign(&other.g2);
         Ok(())
     }
+    
+    /// a.equals(b)
+    fn equals(&self, other: &Self) -> bool {
+        self.g2 == other.g2
+    }
+    
+    /// Copy other into self
+    fn copy(&mut self, other: &Self) -> PyResult<()> {
+        self.g2 = other.g2;
+        Ok(())
+    }
+   
+    pub fn __str__(&self) -> PyResult<String> {
+        Ok(format!("G2(x = {} , y = {} )",self.g2.into_affine().x, self.g2.into_affine().y))                
+    }
 
 }
+
+#[pyclass]
+struct PyFr {
+   fr : Fr
+}
+
+#[pymethods]
+impl PyFr {
+    
+    #[new]
+    fn __new__(obj: &PyRawObject, s1: u32, s2: u32, s3: u32, s4: u32) -> PyResult<()>{
+        let mut rng = XorShiftRng::from_seed([s1,s2,s3,s4]);
+        let f =  Fr::rand(&mut rng);
+        obj.init(|t| PyFr{
+            fr: f,
+        })
+    }  
+
+    fn one(&mut self) -> PyResult<()> {
+        self.fr = Fr::one();
+        Ok(())
+    }
+   
+    fn zero(&mut self) -> PyResult<()> {
+        self.fr = Fr::zero();
+        Ok(())
+    }
+
+    fn negate(&mut self) -> PyResult<()> {
+        self.fr.negate();
+        Ok(())
+    }
+
+    fn inverse(&mut self) -> PyResult<()> {
+        self.fr.inverse();
+        Ok(())
+    }
+
+    fn double(&mut self) -> PyResult<()> {
+        self.fr.double();
+        Ok(())
+    }
+    
+    fn add_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.fr.add_assign(&other.fr);
+        Ok(())
+    }
+
+    fn sub_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.fr.sub_assign(&other.fr);
+        Ok(())
+    }
+    
+    /// a.equals(b)
+    fn equals(&self, other: &Self) -> bool {
+        self.fr == other.fr
+    }
+    
+    /// Copy other into self
+    fn copy(&mut self, other: &Self) -> PyResult<()> {
+        self.fr = other.fr;
+        Ok(())
+    }
+   
+    pub fn __str__(&self) -> PyResult<String> {
+        Ok(format!("Fr( {} )",self.fr))                
+    }
+    
+}
+
+
 
 #[pyclass]
 struct PyFq12 {
@@ -268,6 +369,16 @@ impl PyFq12 {
         self.fq12.mul_assign(&other.fq12);
         Ok(())
     }
+    
+    fn equals(&self, other: &Self) -> bool {
+        self.fq12 == other.fq12
+    }
+    
+    /// Copy other into self
+    fn copy(&mut self, other: &Self) -> PyResult<()> {
+        self.fq12 = other.fq12;
+        Ok(())
+    }
 
     
 }
@@ -278,6 +389,7 @@ fn pypairing(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyG1>()?;
     m.add_class::<PyG2>()?;
     m.add_class::<PyFq12>()?;
+    m.add_class::<PyFr>()?;
     m.add_function(wrap_function!(py_pairing)).unwrap();
     Ok(())
 }
