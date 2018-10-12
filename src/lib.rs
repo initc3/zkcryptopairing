@@ -149,7 +149,31 @@ impl PyG1 {
         r.fq12 = a.pairing_with(&b);
         Ok(())
     }
+
+    fn one(&mut self) -> PyResult<()> {
+        self.g1 = G1::one();
+        Ok(())
+    }
+   
+    fn zero(&mut self) -> PyResult<()> {
+        self.g1 = G1::zero();
+        Ok(())
+    }
+
+    fn double(&mut self) -> PyResult<()> {
+        self.g1.double();
+        Ok(())
+    }
     
+    fn add_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.g1.add_assign(&other.g1);
+        Ok(())
+    }
+
+    fn sub_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.g1.sub_assign(&other.g1);
+        Ok(())
+    }
     
 }
 
@@ -173,6 +197,31 @@ impl PyG2 {
         let a = self.g2.into_affine();
         let b = g1.g1.into_affine();
         r.fq12 = a.pairing_with(&b);
+        Ok(())
+    }
+
+    fn one(&mut self) -> PyResult<()> {
+        self.g2 = G2::one();
+        Ok(())
+    }
+   
+    fn zero(&mut self) -> PyResult<()> {
+        self.g2 = G2::zero();
+        Ok(())
+    }
+    
+    fn double(&mut self) -> PyResult<()> {
+        self.g2.double();
+        Ok(())
+    }
+    
+    fn add_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.g2.add_assign(&other.g2);
+        Ok(())
+    }
+
+    fn sub_assign(&mut self, other: &Self) -> PyResult<()> {
+        self.g2.sub_assign(&other.g2);
         Ok(())
     }
 
