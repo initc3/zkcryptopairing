@@ -175,6 +175,11 @@ impl PyG1 {
         Ok(())
     }
 
+    fn mul_assign(&mut self, other:&PyFr) -> PyResult<()> {
+        self.g1.mul_assign(other.fr);
+        Ok(())
+    }
+
     /// a.equals(b)
     fn equals(&self, other: &Self) -> bool {
         self.g1 == other.g1
@@ -237,6 +242,11 @@ impl PyG2 {
 
     fn sub_assign(&mut self, other: &Self) -> PyResult<()> {
         self.g2.sub_assign(&other.g2);
+        Ok(())
+    }
+    
+    fn mul_assign(&mut self, other:&PyFr) -> PyResult<()> {
+        self.g2.mul_assign(other.fr);
         Ok(())
     }
     
