@@ -27,7 +27,7 @@ extern crate rand;
 pub mod tests;
 
 pub mod bls12_381;
-use bls12_381::{G1, G2, Fr, Fq12};
+use bls12_381::{G1, G2, Fr, FrRepr, Fq12};
 mod wnaf;
 pub use self::wnaf::Wnaf;
 
@@ -267,6 +267,24 @@ impl PyG2 {
 
 }
 
+
+#[pyclass]
+struct PyFrRepr {
+    fr_repr : FrRepr
+}
+
+#[pymethods]
+impl PyFrRepr {
+
+    #[new]
+    fn __new__(obj: &PyRawObject, s1: u64, s2: u64, s3: u64, s4: u64) -> PyResult<()>{
+        let f = FrRepr([s1,s2,s3,s4]);
+        obj.init(|t| PyFrRepr{
+            fr_repr: f,
+        })
+    }
+}
+
 #[pyclass]
 struct PyFr {
    fr : Fr
@@ -282,7 +300,14 @@ impl PyFr {
         obj.init(|t| PyFr{
             fr: f,
         })
-    }  
+    } 
+
+
+    fn fromFr(&mut self, py_fr_repr: &PyFrRepr) -> PyResult<()> {
+        let f = Fr::from_repr(py_fr_repr.fr_repr).unwrap();
+        self.fr = f;
+        Ok(())
+    }
 
     fn one(&mut self) -> PyResult<()> {
         self.fr = Fr::one();
@@ -400,6 +425,7 @@ fn pypairing(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyG2>()?;
     m.add_class::<PyFq12>()?;
     m.add_class::<PyFr>()?;
+    m.add_class::<PyFrRepr>()?;
     m.add_function(wrap_function!(py_pairing)).unwrap();
     Ok(())
 }
