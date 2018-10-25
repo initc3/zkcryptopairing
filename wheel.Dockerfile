@@ -2,11 +2,19 @@ FROM quay.io/pypa/manylinux1_x86_64 as wheel_builder
 
 ENV PYTHONUNBUFFERED=1
 
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+ENV PATH /root/.cargo/bin:$PATH
+ENV PYBIN /opt/python/cp37-cp37m/bin
+ENV PYTHON_SYS_EXECUTABLE "$PYBIN/python"
+RUN "${PYBIN}/pip" install -U pip setuptools wheel setuptools-rust
+
 RUN mkdir -p /usr/src/pairing
 WORKDIR /usr/src/pairing
 COPY . /usr/src/pairing
 
-RUN sh scripts/build-wheel.sh
+RUN "${PYBIN}/python" setup.py bdist_wheel
+
+RUN sh scripts/repair-wheel.sh
 
 
 FROM python:alpine3.8
